@@ -9,6 +9,8 @@ SERVICE_FILE="${SCRIPT_DIR}/${SERVICE_NAME}.service"
 SYSTEMD_DIR="/etc/systemd/system"
 SYSTEMD_SERVICE="${SYSTEMD_DIR}/${SERVICE_NAME}.service"
 MINER_SCRIPT="${SCRIPT_DIR}/miner.py"
+VENV_DIR="${SCRIPT_DIR}/venv"
+REQUIREMENTS_FILE="${SCRIPT_DIR}/requirements.txt"
 
 # Colors for output
 RED='\033[0;31m'
@@ -105,6 +107,44 @@ usage() {
     echo "  $0 --logs                        # View service logs"
 }
 
+setup_venv() {
+    echo -e "${GREEN}Setting up Python virtual environment...${NC}"
+
+    # Check if venv already exists
+    if [ -d "${VENV_DIR}" ]; then
+        echo -e "${YELLOW}Virtual environment already exists at ${VENV_DIR}${NC}"
+        echo -e "${YELLOW}Updating dependencies...${NC}"
+    else
+        echo -e "${GREEN}Creating virtual environment at ${VENV_DIR}...${NC}"
+        "$PYTHON_CMD" -m venv "${VENV_DIR}"
+        if [ $? -ne 0 ]; then
+            echo -e "${RED}Error: Failed to create virtual environment${NC}"
+            exit 1
+        fi
+        echo -e "${GREEN}✓ Virtual environment created${NC}"
+    fi
+
+    # Activate venv and install/upgrade pip
+    echo -e "${GREEN}Upgrading pip...${NC}"
+    "${VENV_DIR}/bin/pip" install --upgrade pip --quiet
+
+    # Install requirements
+    if [ -f "${REQUIREMENTS_FILE}" ]; then
+        echo -e "${GREEN}Installing requirements from ${REQUIREMENTS_FILE}...${NC}"
+        "${VENV_DIR}/bin/pip" install -r "${REQUIREMENTS_FILE}" --quiet
+        if [ $? -ne 0 ]; then
+            echo -e "${RED}Error: Failed to install requirements${NC}"
+            exit 1
+        fi
+        echo -e "${GREEN}✓ Requirements installed${NC}"
+    else
+        echo -e "${YELLOW}Warning: requirements.txt not found at ${REQUIREMENTS_FILE}${NC}"
+        echo -e "${YELLOW}Installing basic dependencies...${NC}"
+        "${VENV_DIR}/bin/pip" install pycardano wasmtime requests cbor2 portalocker --quiet
+        echo -e "${GREEN}✓ Basic dependencies installed${NC}"
+    fi
+}
+
 create_env_file() {
     local workers=$1
     echo -e "${GREEN}Creating/updating environment file: ${ENV_FILE}${NC}"
@@ -126,8 +166,22 @@ create_service_file() {
         exit 1
     fi
 
+    # Ensure venv exists
+    if [ ! -d "${VENV_DIR}" ]; then
+        echo -e "${RED}Error: Virtual environment not found at ${VENV_DIR}${NC}"
+        echo -e "${RED}Please run setup with --workers first to create the venv${NC}"
+        exit 1
+    fi
+
+    # Get venv Python path
+    VENV_PYTHON="${VENV_DIR}/bin/python"
+    if [ ! -f "${VENV_PYTHON}" ]; then
+        echo -e "${RED}Error: Python interpreter not found in venv at ${VENV_PYTHON}${NC}"
+        exit 1
+    fi
+
     echo -e "${GREEN}Creating/updating service file: ${SERVICE_FILE}${NC}"
-    echo -e "${YELLOW}  Using Python: ${PYTHON_FULL_PATH} (${PYTHON_VERSION})${NC}"
+    echo -e "${YELLOW}  Using Python: ${VENV_PYTHON} (from venv)${NC}"
     echo -e "${YELLOW}  Using User: ${user}${NC}"
     echo -e "${YELLOW}  Working Directory: ${SCRIPT_DIR}${NC}"
 
@@ -142,7 +196,7 @@ User=${user}
 WorkingDirectory=${SCRIPT_DIR}
 EnvironmentFile=${ENV_FILE}
 ExecStartPre=-/usr/bin/git pull
-ExecStart=${PYTHON_FULL_PATH} ${MINER_SCRIPT} --workers \${WORKERS}
+ExecStart=${VENV_PYTHON} ${MINER_SCRIPT} --workers \${WORKERS}
 Restart=always
 RestartSec=10
 StandardOutput=journal
@@ -193,6 +247,12 @@ update_service() {
     if [ ! -f "${SYSTEMD_SERVICE}" ]; then
         echo -e "${RED}Error: Service is not installed. Use --install instead.${NC}"
         exit 1
+    fi
+
+    # Ensure venv exists (create if missing)
+    if [ ! -d "${VENV_DIR}" ]; then
+        echo -e "${YELLOW}Virtual environment not found. Creating it...${NC}"
+        setup_venv
     fi
 
     # If workers or user are provided, update the service file
@@ -394,6 +454,7 @@ if [ -n "$WORKERS" ]; then
         exit 1
     fi
 
+    setup_venv
     create_env_file "$WORKERS"
     create_service_file "${USER:-$(whoami)}"
 

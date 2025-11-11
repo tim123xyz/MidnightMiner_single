@@ -27,11 +27,16 @@ The miner operates by performing the following steps:
 Before running the miner, ensure you have the following:
 
 1.  **Python 3**: The script is written in Python (version 3.13 or higher required).
-2.  **Required Libraries**: Install the necessary Python packages using pip:
-    ```bash
-    pip install requests pycardano cbor2 portalocker
-    ```
-3. **Git**: Use Git to download and update your Miner easily.
+2.  **Python venv module**: Usually included with Python 3.3+, but can be installed separately if needed.
+3.  **Required Python Libraries**: The following packages are required and will be installed automatically when setting up the virtual environment:
+    - `pycardano` - Cardano wallet functionality
+    - `wasmtime` - WebAssembly runtime
+    - `requests` - HTTP requests
+    - `cbor2` - CBOR encoding/decoding
+    - `portalocker` - Cross-platform file locking
+
+    These are listed in `requirements.txt` and will be installed automatically when you set up the virtual environment.
+4. **Git**: Use Git to download and update your Miner easily.
 
 ## Download
 
@@ -42,20 +47,43 @@ git clone https://github.com/djeanql/MidnightMiner && cd MidnightMiner
 
 ## Usage
 
-You can run the miner from your terminal.
+### Manual Setup (Recommended for First-Time Users)
 
--   **Start mining**:
-    This command will either load an existing wallet from `wallets.json` or create a new one if it doesn't exist.
-    ```bash
-    python miner.py
-    ```
+1. **Create a virtual environment**:
+   ```bash
+   python3 -m venv venv
+   ```
 
--   **Multiple workers**:
-    To mine with multiple workers, use:
-    ```bash
-    python miner.py --workers <number of workers>
-    ```
-    Each worker uses one CPU core and 1GB of RAM. The miner will automatically create enough wallets for all workers and rotate through them as challenges are completed. Each worker always mines to a unique wallet. Do not run more workers than your system is capable of.
+2. **Activate the virtual environment**:
+   - On Linux/macOS:
+     ```bash
+     source venv/bin/activate
+     ```
+   - On Windows:
+     ```bash
+     venv\Scripts\activate
+     ```
+
+3. **Install required dependencies**:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. **Run the miner**:
+   -   **Start mining**:
+       This command will either load an existing wallet from `wallets.json` or create a new one if it doesn't exist.
+       ```bash
+       python miner.py
+       ```
+
+   -   **Multiple workers**:
+       To mine with multiple workers, use:
+       ```bash
+       python miner.py --workers <number of workers>
+       ```
+       Each worker uses one CPU core and 1GB of RAM. The miner will automatically create enough wallets for all workers and rotate through them as challenges are completed. Each worker always mines to a unique wallet. Do not run more workers than your system is capable of.
+
+**Note**: When using the systemd service (Linux), the virtual environment is automatically created and managed by the `setup-service.sh` script. You don't need to manually create it.
 
 
 ## Running as a Systemd Service (Linux Only)
@@ -78,7 +106,12 @@ Use the included `setup-service.sh` script to configure and install the service:
    ```bash
    ./setup-service.sh --workers 4 --install
    ```
-   This creates the service configuration and installs it to systemd.
+   This automatically:
+   - Creates a Python virtual environment (`venv/`) in the project directory
+   - Installs all required dependencies from `requirements.txt`
+   - Creates the service configuration and installs it to systemd
+
+   The service will use the virtual environment's Python interpreter, ensuring isolated dependencies.
 
 2. **Start the service**:
    ```bash
@@ -96,6 +129,7 @@ After pulling the latest code with `git pull`, update the service configuration:
 
 ```bash
 # Update service file and reload systemd
+# This will also update dependencies in the virtual environment if needed
 ./setup-service.sh --update
 ```
 
@@ -109,6 +143,12 @@ To change the number of workers:
 **Note:** After updating, restart the service for changes to take effect:
 ```bash
 sudo systemctl restart midnight-miner
+```
+
+**Virtual Environment Management**: The `setup-service.sh` script automatically manages the virtual environment. If you need to manually update dependencies, you can activate the venv and run:
+```bash
+source venv/bin/activate
+pip install -r requirements.txt --upgrade
 ```
 
 ### Service Management
@@ -136,9 +176,19 @@ The service is configured to automatically run `git pull` before starting, ensur
 ## Resubmitting Failed Solutions
 
 If solutions fail to submit due to network issues or API errors, they are automatically saved to `solutions.csv`. To resubmit them:
+
+**If using manual setup**, make sure your virtual environment is activated:
+```bash
+source venv/bin/activate  # On Linux/macOS
+# or
+venv\Scripts\activate      # On Windows
+```
+
+Then run:
 ```bash
 python resubmit_solutions.py
 ```
+
 The script automatically removes successfully submitted solutions and keeps any that still failed for retry.
 You should run this once a day, as solutions can no longer be submitted after 24 hours.
 
@@ -177,13 +227,20 @@ python miner.py --no-donation
 
 To claim your earned NIGHT tokens (when they are distributed), you will need to import your wallets' signing keys (`.skey` files) into a Cardano wallet like Eternl. The `export_skeys.py` script helps with this process.
 
-1.  **Run the export script**:
+1.  **Activate virtual environment** (if using manual setup):
+    ```bash
+    source venv/bin/activate  # On Linux/macOS
+    # or
+    venv\Scripts\activate      # On Windows
+    ```
+
+2.  **Run the export script**:
     ```bash
     python export_skeys.py
     ```
     This will create a directory named `skeys/` (if it doesn't exist) and export each wallet's signing key from `wallets.json` into a separate `.skey` file.
 
-2.  **Import into Eternl (or other Cardano wallet)**:
+3.  **Import into Eternl (or other Cardano wallet)**:
     *   Open your Eternl wallet.
     *   Go to `Add Wallet` -> `More` -> `CLI Signing Keys`.
     *   Import the `.skey` files generated in the `skeys/` directory.
@@ -244,8 +301,15 @@ A script `plot_challenges.py` is included to visualize the number of solved chal
 
 ### Prerequisites
 
-This script requires `matplotlib`. You can install it using pip:
+This script requires `matplotlib`. If you're using a virtual environment (recommended), make sure it's activated:
 
+```bash
+source venv/bin/activate  # On Linux/macOS
+# or
+venv\Scripts\activate      # On Windows
+```
+
+Then install matplotlib:
 ```bash
 pip install matplotlib
 ```

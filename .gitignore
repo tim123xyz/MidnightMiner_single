@@ -4,3 +4,5 @@ solutions.csv
 wallets.json
 midnight-miner.service
 midnight-miner.env
+venv/
+.venv/
