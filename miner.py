@@ -737,7 +737,6 @@ class MinerWorker:
                 time_left = (deadline - datetime.now(timezone.utc)).total_seconds()
 
                 if time_left <= 0:
-                    self.challenge_tracker.mark_solved(challenge_id, self.address)
                     self.logger.info(f"Worker {self.worker_id} ({self.short_addr}): Challenge {challenge_id} expired")
                     self.update_status(current_challenge='Expired')
                     time.sleep(5)
