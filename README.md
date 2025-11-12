@@ -10,7 +10,7 @@ If you are unfamiliar with python, and/or using windows, check out the [Easy Gui
 
 This is an unofficial tool, and has not been properly tested. Use it at your own risk.
 
-I will be updating and improving this software regularly. Please keep up to date by re-downloading from this repository and copying over your `wallets.json` and `challenges.json` files, or simply by running `git pull`. 
+I will be updating and improving this software regularly. Please keep up to date by re-downloading from this repository and copying over your `wallets.json` and `challenges.json` files, or simply by running `git pull`.
 
 ## How It Works
 
@@ -27,11 +27,16 @@ The miner operates by performing the following steps:
 Before running the miner, ensure you have the following:
 
 1.  **Python 3**: The script is written in Python (version 3.13 or higher required).
-2.  **Required Libraries**: Install the necessary Python packages using pip:
-    ```bash
-    pip install requests pycardano cbor2 portalocker
-    ```
-3. **Git**: Use Git to download and update your Miner easily.
+2.  **Python venv module**: Usually included with Python 3.3+, but can be installed separately if needed.
+3.  **Required Python Libraries**: The following packages are required and will be installed automatically when setting up the virtual environment:
+    - `pycardano` - Cardano wallet functionality
+    - `wasmtime` - WebAssembly runtime
+    - `requests` - HTTP requests
+    - `cbor2` - CBOR encoding/decoding
+    - `portalocker` - Cross-platform file locking
+
+    These are listed in `requirements.txt` and will be installed automatically when you set up the virtual environment.
+4. **Git**: Use Git to download and update your Miner easily.
 
 ## Download
 
@@ -42,39 +47,79 @@ git clone https://github.com/djeanql/MidnightMiner && cd MidnightMiner
 
 ## Usage
 
-You can run the miner from your terminal.
+### Manual Setup (Recommended for First-Time Users)
 
--   **Start mining**:
-    This command will either load an existing wallet from `wallets.json` or create a new one if it doesn't exist.
-    ```bash
-    python miner.py
-    ```
+1. **Create a virtual environment**:
+   ```bash
+   python3 -m venv venv
+   ```
 
--   **Multiple workers**:
-    To mine with multiple workers, use:
-    ```bash
-    python miner.py --workers <number of workers>
-    ```
-    Each worker uses one CPU core and 1GB of RAM. The miner will automatically create enough wallets for all workers and rotate through them as challenges are completed. Each worker always mines to a unique wallet. Do not run more workers than your system is capable of.
+2. **Activate the virtual environment**:
 
+   ⚠️ All future steps will assume you are in the virtual environment.
+
+   - On Linux/macOS:
+     ```bash
+     source venv/bin/activate
+     ```
+   - On Windows:
+     ```bash
+     venv\Scripts\activate
+     ```
+
+3. **Install required dependencies**:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. **Run the miner**:
+   -   **Start mining**:
+       This command will either load an existing wallet from `wallets.json` or create a new one if it doesn't exist.
+       ```bash
+       python miner.py
+       ```
+
+   -   **Multiple workers**:
+       To mine with multiple workers, use:
+       ```bash
+       python miner.py --workers <number of workers>
+       ```
+       Each worker uses one CPU core and 1GB of RAM. The miner will automatically create enough wallets for all workers and rotate through them as challenges are completed. Each worker always mines to a unique wallet. Do not run more workers than your system is capable of.
+
+### Running as a Systemd Service (Linux Only)
+
+For Linux users, you can run the miner as a systemd service, which allows it to:
+
+- Start automatically on boot
+- Restart automatically if it crashes
+- Automatically pull the latest code from git before starting
+- Run in the background without a terminal
+
+Please refer to [SYSTEMD.md](SYSTEMD.md) for setup instructions.
 
 ## Resubmitting Failed Solutions
 
-If solutions fail to submit due to network issues or API errors, they are automatically saved to `solutions.csv`. To resubmit them:
+If solutions fail to submit due to network issues or API errors, they are automatically saved to `solutions.csv`. To resubmit them, run:
+
 ```bash
 python resubmit_solutions.py
 ```
+
 The script automatically removes successfully submitted solutions and keeps any that still failed for retry.
 You should run this once a day, as solutions can no longer be submitted after 24 hours.
 
 ## ⚠️ Update Regularly
 
-This software will be updated frequently, so it is VERY important you update it to earn the highest rewards. To update, run this command in the MidnightMiner directory:
+This software will be updated frequently, so it is VERY important you update it to earn the highest rewards.
+
+Update by running this command in the MidnightMiner directory:
 ```
 git pull
 ```
 
-I suggest running this once a day to make sure your miner is up-to-date.
+I suggest checking for updates once a day to make sure your miner is up-to-date.
+
+**Systemd Users**: If you are running MidnightMiner as a `systemd` service, please check [here](SYSTEMD.md) for update instructions.
 
 
 ## Developer Donations
@@ -92,6 +137,7 @@ python miner.py --no-donation
 ## Exporting Wallets
 
 To claim your earned NIGHT tokens (when they are distributed), you will need to import your wallets' signing keys (`.skey` files) into a Cardano wallet like Eternl. The `export_skeys.py` script helps with this process.
+
 
 1.  **Run the export script**:
     ```bash
@@ -160,7 +206,7 @@ A script `plot_challenges.py` is included to visualize the number of solved chal
 
 ### Prerequisites
 
-This script requires `matplotlib`. You can install it using pip:
+This script requires `matplotlib`. 
 
 ```bash
 pip install matplotlib
